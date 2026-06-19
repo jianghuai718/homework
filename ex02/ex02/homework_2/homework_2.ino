@@ -1,5 +1,5 @@
 const int LED_PIN = 13;
-const unsigned long INTERVAL = 500; // 500ms开/关 = 1Hz
+const unsigned long INTERVAL = 500; // 500ms开/关 = 1
 
 unsigned long previousMillis = 0;
 bool ledState = false;
