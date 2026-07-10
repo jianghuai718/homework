@@ -2,9 +2,9 @@
 #include <WiFi.h>
 #include <WebServer.h>
 
-// ==================== WiFi配置 ====================
-const char* WIFI_SSID     = "你的WiFi名称";
-const char* WIFI_PASSWORD = "你的WiFi密码";
+// ==================== 热点配置 ====================
+const char* AP_SSID     = "ESP32_Alarm";      // 热点名称
+const char* AP_PASSWORD = "12345678";         // 热点密码（≥8位）
 
 // ==================== 硬件引脚 ====================
 #define ALARM_LED    2
@@ -14,16 +14,17 @@ const unsigned long TOUCH_DEBOUNCE = 60;
 
 WebServer server(80);
 
-// 全局状态变量（作业要求）
-bool systemArmed = false;    // true=布防 false=撤防
-bool alarmTriggered = false;// true=锁定报警，无法自动解除
+// 全局状态变量
+bool systemArmed = false;       // true=布防 false=撤防
+bool alarmTriggered = false;    // true=锁定报警，无法自动解除
 bool lastTouchState = false;
 unsigned long touchDebounceTimer = 0;
 
-// 分段生成网页（解决编译卡死）
+// 分段生成网页
 String getHtmlPage(){
   String page = "<!DOCTYPE html><html lang='zh-CN'>";
   page += "<head><meta charset='UTF-8'><title>ex08 安防报警器</title>";
+  page += "<meta name='viewport' content='width=device-width, initial-scale=1.0'>";  // 手机适配
   page += "<style>body{text-align:center;margin-top:80px;font-size:22px;}";
   page += ".btn{font-size:24px;padding:15px 40px;margin:20px 10px;border:none;border-radius:8px;cursor:pointer;}";
   page += "#armBtn{background:#c0392b;color:white;}#disarmBtn{background:#27ae60;color:white;}";
@@ -49,6 +50,8 @@ void handleRoot(){
 // 布防接口
 void handleArm(){
   systemArmed = true;
+  alarmTriggered = false;   // 布防时清除之前的报警状态
+  digitalWrite(ALARM_LED, LOW);
   server.send(200, "text/plain", "armed");
 }
 
@@ -60,32 +63,30 @@ void handleDisarm(){
   server.send(200, "text/plain", "disarmed");
 }
 
-// WiFi初始化
-void initWiFi(){
+// 热点初始化（AP模式）
+void initAP(){
   Serial.begin(115200);
   pinMode(ALARM_LED, OUTPUT);
   digitalWrite(ALARM_LED, LOW);
 
-  Serial.print("连接WiFi: ");
-  Serial.println(WIFI_SSID);
-  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-  while(WiFi.status() != WL_CONNECTED){
-    delay(500);
-    Serial.print(".");
-  }
-  Serial.println("\nWiFi连接成功！");
+  Serial.print("开启热点: ");
+  Serial.println(AP_SSID);
+  WiFi.softAP(AP_SSID, AP_PASSWORD);
+  
+  Serial.println("热点已开启！");
   Serial.print("安防主机IP：");
-  Serial.println(WiFi.localIP());
+  Serial.println(WiFi.softAPIP());  // 默认 192.168.4.1
 }
 
 void setup(){
-  initWiFi();
+  initAP();
   // 注册网页接口
   server.on("/", handleRoot);
   server.on("/arm", handleArm);
   server.on("/disarm", handleDisarm);
   server.begin();
   Serial.println("Web安防服务已启动");
+  Serial.println("手机连接热点后访问 http://192.168.4.1");
 }
 
 void loop(){
@@ -117,4 +118,4 @@ void loop(){
     lastTouchState = currTouch;
     touchDebounceTimer = now;
   }
-}0
+}

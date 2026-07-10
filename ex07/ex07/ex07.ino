@@ -2,15 +2,18 @@
 #include <WiFi.h>
 #include <WebServer.h>
 
-const char* ssid     = "Mark7";
-const char* password = "zxy623718";
+// ===== 热点配置 =====
+const char* ap_ssid     = "ESP32_LED";      // 热点名称（手机搜这个）
+const char* ap_password = "12345678";       // 热点密码（最少8位）
 #define LED_PIN 2
+
 WebServer server(80);
 int ledBright = 0;
 
 String getHtml(){
   String page = "<!DOCTYPE html><html lang='zh-CN'>";
   page += "<head><meta charset='UTF-8'><title>Web无极调光 ex07</title>";
+  page += "<meta name='viewport' content='width=device-width, initial-scale=1.0'>";  // 让手机适配
   page += "<style>body { text-align:center; margin-top:80px; font-size:22px; }";
   page += "#slider { width:80%; height:30px; margin:30px 0; }";
   page += "#valText { font-size:26px; color:#0066cc; font-weight:bold; }</style></head>";
@@ -40,26 +43,27 @@ void handleSetBright() {
   server.send(200, "text/plain", "ok");
 }
 
-void setupWiFi(){
+void setupAP(){
   Serial.begin(115200);
   pinMode(LED_PIN, OUTPUT);
   analogWrite(LED_PIN, 0);
-  Serial.print("连接WiFi: ");
-  Serial.println(ssid);
-  WiFi.begin(ssid, password);
-  while(WiFi.status() != WL_CONNECTED){
-    delay(500);
-    Serial.print(".");
-  }
-  Serial.println("\nWiFi连接成功！IP：");
-  Serial.println(WiFi.localIP());
+  
+  // ===== 开启热点（AP模式） =====
+  Serial.print("开启热点: ");
+  Serial.println(ap_ssid);
+  WiFi.softAP(ap_ssid, ap_password);
+  
+  // 获取热点的IP地址（默认是 192.168.4.1）
+  Serial.println("热点已开启！IP地址：");
+  Serial.println(WiFi.softAPIP());
 }
 
 void setup() {
-  setupWiFi();
+  setupAP();
   server.on("/", handleRoot);
   server.on("/set", handleSetBright);
   server.begin();
+  Serial.println("Web服务器已启动！手机连接热点后，访问 http://192.168.4.1");
 }
 
 void loop() {
